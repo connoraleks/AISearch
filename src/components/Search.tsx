@@ -81,7 +81,7 @@ const Search = () => {
                         {row.map((node, cindex) => (
                             <button key={cindex}
                                     disabled={!drawing}
-                                    className='w-10 h-10 enabled:hover:scale-[0.95] transition-transform duration-500 ease-in-out rounded-sm' 
+                                    className='w-5 h-5 sm:w-7 sm:h-7 md:w-10 md:h-10 enabled:hover:scale-[0.95] transition-all duration-300 ease-in-out rounded-sm' 
                                     style={{backgroundColor: node.color}}
                                     onMouseDown={() => {
                                         if (isDrawingStart) {
