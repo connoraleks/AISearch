@@ -1,6 +1,11 @@
 import {Node, Grid} from '../types';
-import {getNeighbors, createGrid} from '../utils';
+import * as Utils from '../utils';
 import { useState, useEffect, useRef } from 'react';
+import Box from '@mui/material/Box';
+import InputLabel from '@mui/material/InputLabel';
+import MenuItem from '@mui/material/MenuItem';
+import FormControl from '@mui/material/FormControl';
+import Select, { SelectChangeEvent } from '@mui/material/Select';
 const Search = () => {
     const colors = {
         start: "#4ee66c",
@@ -10,8 +15,15 @@ const Search = () => {
         path: "#e6e64e",
         default: "#ffffff"
     }
+    const algorithms = {
+        "Dijkstra's Algorithm": Utils.dijkstra,
+        "A* Search": Utils.aStar,
+        "Breadth First Search": Utils.bfs,
+        "Depth First Search": Utils.dfs
+    }
+    const algorithmList = Object.keys(algorithms);
     const gridRef = useRef<HTMLDivElement>(null);
-    const [grid, setGrid] = useState<Grid>(createGrid(15, 15));
+    const [grid, setGrid] = useState<Grid>(Utils.createGrid(25, 50));
     const [drawing, setDrawing] = useState<boolean>(false);
     const [startNode, setStartNode] = useState<Node>();
     const [isDrawingStart, setIsDrawingStart] = useState<boolean>(false);
@@ -22,21 +34,62 @@ const Search = () => {
     const [isClearing, setIsClearing] = useState<boolean>(false);
     const [isDrawingWalls, setIsDrawingWalls] = useState<boolean>(false);
     const [continuousDrawing, setContinuousDrawing] = useState<boolean>(false);
+    const [algorithm, setAlgorithm] = useState<[string, (grid: Grid, startNode: Node, endNode: Node) => Node[]]>([algorithmList[0], algorithms[algorithmList[0] as keyof typeof algorithms]]);
 
 
     useEffect(() => {
         if (isClearing) {
-            setGrid(createGrid(15, 15));
+            setGrid(Utils.createGrid(25, 50));
+            setStartNode(undefined);
+            setEndNode(undefined);
+            setWalls([]);
             setIsClearing(false);
         }
     }, [isClearing]);
 
+    //When the isSearching state changes, run the search algorithm, coloring the neighbors of the start node
     useEffect(() => {
-        if (isSearching) { 
-            // TODO: Implement search algorithm
+        if (isSearching && startNode && endNode) {
+            // Determine which algorithm to use
+            const algorithmFunction = algorithm[1];
+
+            // Run the algorithm
+            const visitedNodes = algorithmFunction(grid, startNode, endNode);
+
+            // Color the visited nodes
+            for (let i = 0; i < visitedNodes.length; i++) {
+                setTimeout(() => {
+                    const node = visitedNodes[i];
+                    grid.nodes[node.row][node.col].isVisited = true;
+                    setGrid({...grid});
+                }, 10 * i);
+            }
+
+            // Color the path
+            setTimeout(() => {
+                const path = Utils.getPath(endNode);
+                console.log(path);
+                for (let i = 0; i < path.length; i++) {
+                    setTimeout(() => {
+                        const node = path[i];
+                        grid.nodes[node.row][node.col].isPath = true;
+                        setGrid({...grid});
+                    }, 50 * i);
+                }
+            }, 10 * visitedNodes.length);
+            //print all of the nodes in the grid that have the parent attribute
+            console.log(grid.nodes.filter(row => row.filter(node => node.parent).length > 0));
+        }
+        else if (isSearching && !startNode) {
+            alert("Please select a start node");
             setIsSearching(false);
         }
-    }, [isSearching]);
+        else if (isSearching && !endNode) {
+            alert("Please select an end node");
+            setIsSearching(false);
+        }
+        setIsSearching(false);
+    }, [algorithm, colors.path, colors.visited, endNode, grid, isSearching, startNode]);
 
     useEffect(() => {
         setDrawing(isDrawingStart || isDrawingEnd || isDrawingWalls);
@@ -70,8 +123,39 @@ const Search = () => {
                         onClick={() => setIsClearing(true)}>
                     Clear
                 </button>
+                {/* Dropdown menu for selecting the algorithm with color/font matching the theme */}
+                <FormControl sx={{ m: 1, minWidth: 120 }}>
+                    <InputLabel 
+                        id="demo-simple-select-label"
+                        sx={{color: 'white'}}
+                    >
+                        Algorithm
+                    </InputLabel>
+                    <Select
+                        labelId="demo-simple-select-label"
+                        id="demo-simple-select"
+                        value={algorithm[0]}
+                        label="Algorithm"
+                        onChange={(e: SelectChangeEvent) => setAlgorithm([e.target.value as string, algorithms[e.target.value as keyof typeof algorithms]])}
+                        sx={{ color: 'white', '& .MuiSelect-icon': { color: 'white' } }}
+                    >
+                        {algorithmList.map((algorithm, index) => {
+                            return <MenuItem key={index} value={algorithm}>{algorithm}</MenuItem>
+                        })}
+                    </Select>
+                </FormControl>
                 <button className='bg-[#1e243d] text-white text-lg font-bold py-2 px-4 rounded hover:text-blue-300 transition-colors duration-300'
-                        onClick={() => setIsSearching(true)}>
+                        onClick={() => {
+                            // Wipe the grid of all visited and path nodes
+                            grid.nodes.forEach(row => {
+                                row.forEach(node => {
+                                    node.isVisited = false;
+                                    node.isPath = false;
+                                });
+                            });
+                            setGrid({...grid});
+                            setIsSearching(true)
+                        }}>
                     Search
                 </button>
             </div>
@@ -81,16 +165,14 @@ const Search = () => {
                         {row.map((node, cindex) => (
                             <button key={cindex}
                                     disabled={!drawing}
-                                    className='w-5 h-5 sm:w-7 sm:h-7 md:w-10 md:h-10 enabled:hover:scale-[0.95] transition-all duration-300 ease-in-out rounded-sm' 
-                                    style={{backgroundColor: node.color}}
+                                    className='w-5 h-5 enabled:hover:scale-[0.95] transition-all duration-300 ease-in-out rounded-sm' 
+                                    style={{backgroundColor: node.isStart ? colors.start : node.isEnd ? colors.end : node.isWall ? colors.wall : node.isPath ? colors.path : node.isVisited ? colors.visited : colors.default}}
                                     onMouseDown={() => {
                                         if (isDrawingStart) {
                                             //Clear previous start node if it exists, without creating a new grid
                                             if (startNode) {
-                                                grid.nodes[startNode.row][startNode.col].color = colors.default;
                                                 grid.nodes[startNode.row][startNode.col].isStart = false;
                                             }
-                                            node.color = colors.start;
                                             node.isStart = true;
                                             setStartNode(node);
                                             setIsDrawingStart(false);
@@ -98,10 +180,8 @@ const Search = () => {
                                         } else if (isDrawingEnd) {
                                             //Clear previous end node if it exists, without creating a new grid
                                             if (endNode) {
-                                                grid.nodes[endNode.row][endNode.col].color = colors.default;
                                                 grid.nodes[endNode.row][endNode.col].isEnd = false;
                                             }
-                                            node.color = colors.end;
                                             node.isEnd = true;
                                             setEndNode(node);
                                             setIsDrawingEnd(false);
@@ -111,9 +191,7 @@ const Search = () => {
                                             if (node.isWall) {
                                                 setWalls(walls.filter(wall => wall !== node));
                                                 node.isWall = false;
-                                                node.color = colors.default;
                                             } else {
-                                                node.color = colors.wall;
                                                 node.isWall = true;
                                                 setWalls([...walls, node]);
                                             }
@@ -127,9 +205,7 @@ const Search = () => {
                                             if (node.isWall) {
                                                 setWalls(walls.filter(wall => wall !== node));
                                                 node.isWall = false;
-                                                node.color = colors.default;
                                             } else {
-                                                node.color = colors.wall;
                                                 node.isWall = true;
                                                 setWalls([...walls, node]);
                                             }

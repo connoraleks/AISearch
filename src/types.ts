@@ -11,7 +11,7 @@ interface Node {
     isEnd: boolean;
     isWall: boolean;
     isVisited: boolean;
-    color: string;
+    isPath: boolean;
 }
 
 interface Grid {
