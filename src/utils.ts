@@ -2,10 +2,11 @@ import {Node, Grid} from './types';
 const getNeighbors = (node: Node, grid: Node[][]) => {
     const neighbors: Node[] = [];
     const {row, col} = node;
+    // return the neighbors of the given node in the following order: top, right, bottom, left
     if(row > 0) neighbors.push(grid[row - 1][col]);
+    if(col < grid[0].length - 1) neighbors.push(grid[row][col + 1]);
     if(row < grid.length - 1) neighbors.push(grid[row + 1][col]);
     if(col > 0) neighbors.push(grid[row][col - 1]);
-    if(col < grid[0].length - 1) neighbors.push(grid[row][col + 1]);
     return neighbors.filter(neighbor => !neighbor.isWall);
 };
 
@@ -67,7 +68,6 @@ const bfs = (grid: Grid, start: Node, end: Node) => {
         visitedNodesInOrder.push(currentNode);
         if(currentNode === endNode) return visitedNodesInOrder;
         const neighbors = getNeighbors(currentNode, gridCopy);
-        console.log(neighbors);
         for(const neighbor of neighbors) {
             if(!neighbor.isVisited && !queue.includes(neighbor)) {
                 queue.push(neighbor);
@@ -83,30 +83,26 @@ const bfs = (grid: Grid, start: Node, end: Node) => {
 
 const dfs = (grid: Grid, start: Node, end: Node) => {
     if(!start || !end || start === end) return [];
-    //Make a copy of the grid to perform the search on
+    // Do recursive DFS on a copy of the grid, and return the visited nodes in order, while marking the parents of each node for the shortest path
     const gridCopy = grid.nodes.map(row => row.map(node => ({...node})));
     const startNode = gridCopy[start.row][start.col];
     const endNode = gridCopy[end.row][end.col];
-
-    //Perform the search on the copy array of nodes, and return the visited nodes in order, while marking the parents of each node for the shortest path
     const visitedNodesInOrder: Node[] = [];
-    const stack: Node[] = [];
-    stack.push(startNode);
-    while(stack.length) {
-        const currentNode = stack.pop()!;
-        currentNode.isVisited = true;
-        visitedNodesInOrder.push(currentNode);
-        if(currentNode === endNode) return visitedNodesInOrder;
-        const neighbors = getNeighbors(currentNode, gridCopy);
+    const dfsHelper = (node: Node) => {
+        if(node === endNode) return true;
+        visitedNodesInOrder.push(node);
+        node.isVisited = true;
+        const neighbors = getNeighbors(node, gridCopy);
         for(const neighbor of neighbors) {
-            if(!neighbor.isVisited && !stack.includes(neighbor)) {
-                stack.push(neighbor);
-                neighbor.parent = currentNode;
-                // Also set the parent on the original grid, so that the shortest path can be found
-                grid.nodes[neighbor.row][neighbor.col].parent = grid.nodes[currentNode.row][currentNode.col];
+            if(!neighbor.isVisited) {
+                neighbor.parent = node;
+                grid.nodes[neighbor.row][neighbor.col].parent = grid.nodes[node.row][node.col];
+                if(dfsHelper(neighbor)) return true;
             }
         }
-    }
+        return false;
+    };
+    dfsHelper(startNode);
     return visitedNodesInOrder;
 };
 

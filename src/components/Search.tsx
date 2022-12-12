@@ -1,12 +1,13 @@
 import {Node, Grid} from '../types';
 import * as Utils from '../utils';
-import { useState, useEffect, useRef } from 'react';
-import Box from '@mui/material/Box';
+import { useState, useEffect } from 'react';
+import { Button, ButtonGroup, ToggleButton, ToggleButtonGroup } from '@mui/material';
 import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
 import Select, { SelectChangeEvent } from '@mui/material/Select';
 const Search = () => {
+    // Colors for the grid
     const colors = {
         start: "#4ee66c",
         end: "#e64e4e",
@@ -15,213 +16,122 @@ const Search = () => {
         path: "#e6e64e",
         default: "#ffffff"
     }
+    // Algorithms for the search
     const algorithms = {
         "Dijkstra's Algorithm": Utils.dijkstra,
         "A* Search": Utils.aStar,
         "Breadth First Search": Utils.bfs,
         "Depth First Search": Utils.dfs
     }
+    const drawingStates = {
+        start: "start",
+        end: "end",
+        walls: "walls",
+        none: "none"
+    }
+    // List of algorithms for the dropdown
     const algorithmList = Object.keys(algorithms);
-    const gridRef = useRef<HTMLDivElement>(null);
+    // State containing the algorithm to use
+    const [algorithm, setAlgorithm] = useState<[string, (grid: Grid, startNode: Node, endNode: Node) => Node[]]>([algorithmList[2], algorithms[algorithmList[2] as keyof typeof algorithms]]);
+    // State for the grid
     const [grid, setGrid] = useState<Grid>(Utils.createGrid(25, 50));
-    const [drawing, setDrawing] = useState<boolean>(false);
+    // State for start node
     const [startNode, setStartNode] = useState<Node>();
-    const [isDrawingStart, setIsDrawingStart] = useState<boolean>(false);
+    // State for end node
     const [endNode, setEndNode] = useState<Node>();
-    const [isDrawingEnd, setIsDrawingEnd] = useState<boolean>(false);
+    // State containing nodes that are walls
     const [walls, setWalls] = useState<Node[]>([]);
+    // State to trigger the search
     const [isSearching, setIsSearching] = useState<boolean>(false);
+    // State to trigger the clearing of the grid
     const [isClearing, setIsClearing] = useState<boolean>(false);
-    const [isDrawingWalls, setIsDrawingWalls] = useState<boolean>(false);
-    const [continuousDrawing, setContinuousDrawing] = useState<boolean>(false);
-    const [algorithm, setAlgorithm] = useState<[string, (grid: Grid, startNode: Node, endNode: Node) => Node[]]>([algorithmList[0], algorithms[algorithmList[0] as keyof typeof algorithms]]);
-
-
-    useEffect(() => {
-        if (isClearing) {
-            setGrid(Utils.createGrid(25, 50));
-            setStartNode(undefined);
-            setEndNode(undefined);
-            setWalls([]);
-            setIsClearing(false);
-        }
-    }, [isClearing]);
-
-    //When the isSearching state changes, run the search algorithm, coloring the neighbors of the start node
-    useEffect(() => {
-        if (isSearching && startNode && endNode) {
-            // Determine which algorithm to use
-            const algorithmFunction = algorithm[1];
-
-            // Run the algorithm
-            const visitedNodes = algorithmFunction(grid, startNode, endNode);
-
-            // Color the visited nodes
-            for (let i = 0; i < visitedNodes.length; i++) {
-                setTimeout(() => {
-                    const node = visitedNodes[i];
-                    grid.nodes[node.row][node.col].isVisited = true;
-                    setGrid({...grid});
-                }, 10 * i);
-            }
-
-            // Color the path
-            setTimeout(() => {
-                const path = Utils.getPath(endNode);
-                console.log(path);
-                for (let i = 0; i < path.length; i++) {
-                    setTimeout(() => {
-                        const node = path[i];
-                        grid.nodes[node.row][node.col].isPath = true;
-                        setGrid({...grid});
-                    }, 50 * i);
-                }
-            }, 10 * visitedNodes.length);
-            //print all of the nodes in the grid that have the parent attribute
-            console.log(grid.nodes.filter(row => row.filter(node => node.parent).length > 0));
-        }
-        else if (isSearching && !startNode) {
-            alert("Please select a start node");
-            setIsSearching(false);
-        }
-        else if (isSearching && !endNode) {
-            alert("Please select an end node");
-            setIsSearching(false);
-        }
-        setIsSearching(false);
-    }, [algorithm, colors.path, colors.visited, endNode, grid, isSearching, startNode]);
-
-    useEffect(() => {
-        setDrawing(isDrawingStart || isDrawingEnd || isDrawingWalls);
-    }, [isDrawingStart, isDrawingEnd, isDrawingWalls]);
-
-
-    useEffect(() => {
-        console.log('startNode', startNode);
-    }, [startNode]);
-
-    useEffect(() => {
-        console.log('endNode', endNode);
-    }, [endNode]);
+    // State containing whether or not the user is drawing; and if so, what they are drawing
+    const [drawing, setDrawing] = useState<string>(drawingStates.none);
 
     return (
-        <div className='flex flex-col items-center'>
-            <div className='flex flex-row pb-4'>
-                <button className='bg-[#1e243d] text-white text-lg font-bold py-2 px-4 rounded hover:text-blue-300 transition-colors duration-300'
-                        onClick={() => setIsDrawingStart(!isDrawingStart)}>
-                    Start
-                </button>
-                <button className='bg-[#1e243d] text-white text-lg font-bold py-2 px-4 rounded hover:text-red-300 transition-colors duration-300'
-                        onClick={() => setIsDrawingEnd(!isDrawingEnd)}>
-                    End
-                </button>
-                <button className='bg-[#1e243d] text-white text-lg font-bold py-2 px-4 rounded hover:text-gray-400 transition-colors duration-300'
-                        onClick={() => setIsDrawingWalls(!isDrawingWalls)}>
-                    Wall
-                </button>
-                <button className='bg-[#1e243d] text-white text-lg font-bold py-2 px-4 rounded  hover:text-red-300 transition-colors duration-300'
-                        onClick={() => setIsClearing(true)}>
-                    Clear
-                </button>
-                {/* Dropdown menu for selecting the algorithm with color/font matching the theme */}
-                <FormControl sx={{ m: 1, minWidth: 120 }}>
-                    <InputLabel 
-                        id="demo-simple-select-label"
-                        sx={{color: 'white'}}
+        <section className='flex flex-col justify-center items-center h-full w-full relative pt-20'>
+            {/* Sticky header with title, toggle buttons, and search controls */}
+            <header className='flex flex-row justify-between items-center w-full h-20 bg-gray-800 fixed top-0 z-10'>
+                {/* Title to match the sleek mui theme */}
+                <h1 className='text-4xl text-white font-bold'>Pathfinding Visualizer</h1>
+                <div className="w-full h-full" >
+                    {/*Toggle button middle section, if the user clicks the same option twice, it will deselect it, include a clear button that looks like its attached to the toggle buttons */}
+                    <ToggleButtonGroup
+                        value={drawing}
+                        exclusive
+                        onChange={(event, newDrawing) => {
+                            if (newDrawing !== null) {
+                                setDrawing(newDrawing);
+                            }
+                        }}
+                        aria-label="drawing"
                     >
-                        Algorithm
-                    </InputLabel>
-                    <Select
-                        labelId="demo-simple-select-label"
-                        id="demo-simple-select"
-                        value={algorithm[0]}
-                        label="Algorithm"
-                        onChange={(e: SelectChangeEvent) => setAlgorithm([e.target.value as string, algorithms[e.target.value as keyof typeof algorithms]])}
-                        sx={{ color: 'white', '& .MuiSelect-icon': { color: 'white' } }}
-                    >
-                        {algorithmList.map((algorithm, index) => {
-                            return <MenuItem key={index} value={algorithm}>{algorithm}</MenuItem>
+                        {/* Toggle button for each drawing state, should look identical to the search and reset buttons, transparent background and white text with full height to match the other buttons */}
+                        {Object.keys(drawingStates).map((state) => {
+                            return (
+                                <ToggleButton value={state} aria-label={state} sx={{ color: "white", borderColor: "white", height: "full", margin: "0" }}>
+                                    {state}
+                                </ToggleButton>
+                            );
                         })}
-                    </Select>
-                </FormControl>
-                <button className='bg-[#1e243d] text-white text-lg font-bold py-2 px-4 rounded hover:text-blue-300 transition-colors duration-300'
-                        onClick={() => {
-                            // Wipe the grid of all visited and path nodes
-                            grid.nodes.forEach(row => {
-                                row.forEach(node => {
-                                    node.isVisited = false;
-                                    node.isPath = false;
-                                });
-                            });
-                            setGrid({...grid});
-                            setIsSearching(true)
-                        }}>
-                    Search
-                </button>
-            </div>
-            <div ref={gridRef} className='grid grid-cols-50 grid-rows-25 gap-1 bg-black p-2 rounded-xl'>
-                {grid.nodes.map((row,rindex) => (
-                    <div key={rindex} className='flex flex-row gap-1'>
-                        {row.map((node, cindex) => (
-                            <button key={cindex}
-                                    disabled={!drawing}
-                                    className='w-5 h-5 enabled:hover:scale-[0.95] transition-all duration-300 ease-in-out rounded-sm' 
-                                    style={{backgroundColor: node.isStart ? colors.start : node.isEnd ? colors.end : node.isWall ? colors.wall : node.isPath ? colors.path : node.isVisited ? colors.visited : colors.default}}
-                                    onMouseDown={() => {
-                                        if (isDrawingStart) {
-                                            //Clear previous start node if it exists, without creating a new grid
-                                            if (startNode) {
-                                                grid.nodes[startNode.row][startNode.col].isStart = false;
-                                            }
-                                            node.isStart = true;
-                                            setStartNode(node);
-                                            setIsDrawingStart(false);
-                                            setIsDrawingWalls(false);
-                                        } else if (isDrawingEnd) {
-                                            //Clear previous end node if it exists, without creating a new grid
-                                            if (endNode) {
-                                                grid.nodes[endNode.row][endNode.col].isEnd = false;
-                                            }
-                                            node.isEnd = true;
-                                            setEndNode(node);
-                                            setIsDrawingEnd(false);
-                                            setIsDrawingWalls(false);
-                                        } else if (isDrawingWalls) {
-                                            //If the node is already a wall, remove it from the walls array
-                                            if (node.isWall) {
-                                                setWalls(walls.filter(wall => wall !== node));
-                                                node.isWall = false;
-                                            } else {
-                                                node.isWall = true;
-                                                setWalls([...walls, node]);
-                                            }
-                                            setContinuousDrawing(true);
-                                        }
-                                    }}
-                                    //Allow user to draw walls by holding down mouse button
-                                    onMouseEnter={() => {
-                                        if (isDrawingWalls && continuousDrawing) {
-                                            //If the node is already a wall, remove it from the walls array
-                                            if (node.isWall) {
-                                                setWalls(walls.filter(wall => wall !== node));
-                                                node.isWall = false;
-                                            } else {
-                                                node.isWall = true;
-                                                setWalls([...walls, node]);
-                                            }
-                                        }
-                                    }}
-                                    onMouseUp={() => {
-                                        if (isDrawingWalls) {
-                                            setContinuousDrawing(false);
-                                        }
-                                    }}
-                            />
-                        ))}
-                    </div>
-                ))}
-            </div>
-        </div>
+                    </ToggleButtonGroup>
+                    {/* Right Section, search controls, features dropdown to select algorithm and button to start search as well as buttons to completely clear the grid and reset the visualizations */}
+                    <FormControl 
+                        variant="outlined"
+                        sx={{ color: "white", borderColor: "white", height: "full", margin: "0" }}
+                    >
+                        <InputLabel id="algorithm-label" sx={{ color: "white" }}>Algorithm</InputLabel>
+                        {/* Dropdown to select the algorithm, should feature transparent background and white text with a white border */}
+                        <Select
+                            labelId="algorithm-label"
+                            id="algorithm"
+                            value={algorithm[0]}
+                            label="Algorithm"
+                            onChange={(event: SelectChangeEvent) => {
+                                setAlgorithm([event.target.value as string, algorithms[event.target.value as keyof typeof algorithms]]);
+                            }}
+                            sx={{
+                                color: "white",
+                                '.MuiOutlinedInput-notchedOutline': {
+                                    borderColor: 'white',
+                                },
+                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: 'white',
+                                },
+                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: 'white',
+                                },
+                                '.MuiSvgIcon-root ': {
+                                    fill: "white !important",
+                                },
+                                height: "full",
+                                margin: "0"
+                            }}           
+                        >
+                            {algorithmList.map((algorithm) => {
+                                return (
+                                    <MenuItem value={algorithm}>{algorithm}</MenuItem>
+                                );
+                            })}
+                        </Select>
+                    </FormControl>
+                    {/* Button group for the search and reset buttons, they should look identical to the toggle buttons, transparent background and white text */}
+                    <ButtonGroup variant="outlined" aria-label="search and reset" sx={{ color: "white", borderColor: "white", height: "full" }}>
+                        <Button sx={{ color: "white", borderColor: "white", height: "full", ":hover": { backgroundColor: "transparent", borderColor: "gray" } }} onClick={() => {
+                            setIsSearching(true);
+                        }}>Search</Button>
+                        <Button sx={{ color: "white", borderColor: "white",  height: "full", borderLeftColor: "gray", ":hover": { backgroundColor: "transparent",  borderColor: "gray", borderLeftColor: "gray" } }} onClick={() => {
+                            setGrid(Utils.createGrid(25, 50));
+                            setWalls([]);
+                            setStartNode(undefined);
+                            setEndNode(undefined);
+                            setIsClearing(true);
+                        }}>Reset</Button>
+                    </ButtonGroup>
+                </div>
+            </header>
+            {/* Grid */}
+        </section>
     );
 };
 
