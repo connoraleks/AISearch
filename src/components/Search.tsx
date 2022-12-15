@@ -14,7 +14,8 @@ const Search = () => {
         wall: "#363029",
         visited: "#4e4ee6",
         path: "#e6e64e",
-        default: "#ffffff"
+        default: "#ffffff",
+        hover: "#1e243d"
     }
     // Algorithms for the search
     const algorithms = {
@@ -29,108 +30,263 @@ const Search = () => {
         walls: "walls",
         none: "none"
     }
+    // Number of rows for the grid, and number of columns for the grid, calculated from the size of the window given that each node is 32px by 32px
+    const numRows = Math.floor((window.innerHeight - 96) / 32); // 96px is the height of the header
+    const numCols = Math.floor(window.innerWidth / 32);
+
     // List of algorithms for the dropdown
     const algorithmList = Object.keys(algorithms);
     // State containing the algorithm to use
     const [algorithm, setAlgorithm] = useState<[string, (grid: Grid, startNode: Node, endNode: Node) => Node[]]>([algorithmList[2], algorithms[algorithmList[2] as keyof typeof algorithms]]);
     // State for the grid
-    const [grid, setGrid] = useState<Grid>(Utils.createGrid(25, 50));
+    const [grid, setGrid] = useState<Grid>(Utils.createGrid(numRows, numCols));
     // State for start node
     const [startNode, setStartNode] = useState<Node>();
     // State for end node
     const [endNode, setEndNode] = useState<Node>();
     // State containing nodes that are walls
     const [walls, setWalls] = useState<Node[]>([]);
-    // State to trigger the search
-    const [isSearching, setIsSearching] = useState<boolean>(false);
-    // State to trigger the clearing of the grid
-    const [isClearing, setIsClearing] = useState<boolean>(false);
-    // State containing whether or not the user is drawing; and if so, what they are drawing
+    // State containing the drawing mode
     const [drawing, setDrawing] = useState<string>(drawingStates.none);
+    // State containing whether or not the user is dragging while drawing
+    const [isDragging, setIsDragging] = useState<boolean>(false);
+    // State containing whether or not the user is erasing walls
+    const [isErasing, setIsErasing] = useState<boolean>(false);
+
+    // Function to handle the user clicking the clear button
+    const handleClear = () => {
+        // Reset the grid
+        setGrid(Utils.createGrid(numRows, numCols));
+        // Reset the start node
+        setStartNode(undefined);
+        // Reset the end node
+        setEndNode(undefined);
+        // Reset the walls
+        setWalls([]);
+    }
+
+    // Function to handle the user clicking the search button
+    const handleSearch = () => {
+        // Remove all isVisited and isPath properties from the grid
+        grid.nodes.forEach(row => {
+            row.forEach(node => {
+                node.isVisited = false;
+                node.isPath = false;
+            });
+        });
+        // If the start node and end node are not defined, return
+        if (!startNode || !endNode) return;
+        // Get the path from the algorithm
+        const visitedNodesInOrder = algorithm[1](grid, startNode, endNode);
+        // Get the path from the end node
+        const nodesInShortestPathOrder = Utils.getPath(endNode);
+        // For each node in the visited nodes in order list, flick the isVisited property to true
+        visitedNodesInOrder.forEach(node => {
+            setTimeout(() => {
+                grid.nodes[node.row][node.col].isVisited = true;
+                setGrid({...grid});
+            }, 15 * visitedNodesInOrder.indexOf(node));
+        });
+        // For each node in the nodes in shortest path order list, flick the isPath property to true
+        nodesInShortestPathOrder.forEach(node => {
+            setTimeout(() => {
+                grid.nodes[node.row][node.col].isPath = true;
+                setGrid({...grid});
+            }, 25 * nodesInShortestPathOrder.indexOf(node) + 15 * visitedNodesInOrder.length);
+        }
+        );
+    }
+
+        
 
     return (
-        <section className='flex flex-col justify-center items-center h-full w-full relative pt-20'>
-            {/* Sticky header with title, toggle buttons, and search controls */}
-            <header className='flex flex-row justify-between items-center w-full h-20 bg-gray-800 fixed top-0 z-10'>
-                {/* Title to match the sleek mui theme */}
-                <h1 className='text-4xl text-white font-bold'>Pathfinding Visualizer</h1>
-                <div className="w-full h-full" >
-                    {/*Toggle button middle section, if the user clicks the same option twice, it will deselect it, include a clear button that looks like its attached to the toggle buttons */}
-                    <ToggleButtonGroup
-                        value={drawing}
-                        exclusive
-                        onChange={(event, newDrawing) => {
-                            if (newDrawing !== null) {
-                                setDrawing(newDrawing);
-                            }
-                        }}
-                        aria-label="drawing"
-                    >
-                        {/* Toggle button for each drawing state, should look identical to the search and reset buttons, transparent background and white text with full height to match the other buttons */}
-                        {Object.keys(drawingStates).map((state) => {
-                            return (
-                                <ToggleButton value={state} aria-label={state} sx={{ color: "white", borderColor: "white", height: "full", margin: "0" }}>
-                                    {state}
-                                </ToggleButton>
-                            );
-                        })}
-                    </ToggleButtonGroup>
-                    {/* Right Section, search controls, features dropdown to select algorithm and button to start search as well as buttons to completely clear the grid and reset the visualizations */}
-                    <FormControl 
-                        variant="outlined"
-                        sx={{ color: "white", borderColor: "white", height: "full", margin: "0" }}
-                    >
-                        <InputLabel id="algorithm-label" sx={{ color: "white" }}>Algorithm</InputLabel>
-                        {/* Dropdown to select the algorithm, should feature transparent background and white text with a white border */}
+        <section className="w-full min-h-screen flex flex-col bg-gray-300">
+            {/* Header containing the title and controls for the search/drawing */}
+            <nav className="flex flex-row justify-between items-center bg-gray-700 p-4 h-24 w-full">
+                <a href="/" className="text-2xl text-white font-bold">AI Search</a>
+                <div className="flex flex-row items-center">
+                    <div id="ButtonGroup" className="hidden md:flex flex-row items-center">
+                        <Button 
+                            onClick={() => {
+                                setDrawing(drawing === drawingStates.start ? drawingStates.none : drawingStates.start);
+                            }}
+                            sx={{
+                                backgroundColor: drawing === drawingStates.start ? colors.start : 'transparent',
+                                color: drawing === drawingStates.start ? colors.default : colors.start,
+                                border: drawing === drawingStates.start ? 'none' : `1px solid white`,
+                                ":hover": {
+                                    border: `1px solid ${colors.start}`,
+                                    backgroundColor: drawing === drawingStates.start ? colors.start : 'transparent',
+                                    color: drawing === drawingStates.start ? colors.default : colors.start,
+                                }
+                            }}
+
+                        >
+                            Start
+                        </Button>
+                        <Button
+                            onClick={() => {
+                                setDrawing(drawing === drawingStates.end ? drawingStates.none : drawingStates.end);
+                            }}
+                            sx={{
+                                backgroundColor: drawing === drawingStates.end ? colors.end : 'transparent',
+                                color: drawing === drawingStates.end ? colors.default : colors.end,
+                                border: drawing === drawingStates.end ? 'none' : `1px solid white`,
+                                ":hover": {
+                                    border: `1px solid ${colors.end}`,
+                                    backgroundColor: drawing === drawingStates.end ? colors.end : 'transparent',
+                                    color: drawing === drawingStates.end ? colors.default : colors.end,
+                                }
+                            }}
+                        >
+                            End
+                        </Button>
+                        <Button
+                            onClick={() => {
+                                setDrawing(drawing === drawingStates.walls ? drawingStates.none : drawingStates.walls);
+                            }}
+                            sx={{
+                                backgroundColor: drawing === drawingStates.walls ? colors.wall : 'transparent',
+                                color: drawing === drawingStates.walls ? colors.default : colors.wall,
+                                border: drawing === drawingStates.walls ? 'none' : `1px solid white`,
+                                ":hover": {
+                                    border: `1px solid ${colors.wall}`,
+                                    backgroundColor: drawing === drawingStates.walls ? colors.wall : 'transparent',
+                                    color: drawing === drawingStates.walls ? colors.default : colors.wall,
+                                }
+                            }}
+                        >
+                            Walls
+                        </Button>
+                    </div>
+                    <FormControl variant="standard" sx={{ m: 1, minWidth: 120 }}>
+                        <InputLabel>Algorithm</InputLabel>
                         <Select
-                            labelId="algorithm-label"
-                            id="algorithm"
+                            labelId="algorithm-select-label"
+                            id="algorithm-select"
                             value={algorithm[0]}
                             label="Algorithm"
                             onChange={(event: SelectChangeEvent) => {
                                 setAlgorithm([event.target.value as string, algorithms[event.target.value as keyof typeof algorithms]]);
                             }}
-                            sx={{
-                                color: "white",
-                                '.MuiOutlinedInput-notchedOutline': {
-                                    borderColor: 'white',
-                                },
-                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: 'white',
-                                },
-                                '&:hover .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: 'white',
-                                },
-                                '.MuiSvgIcon-root ': {
-                                    fill: "white !important",
-                                },
-                                height: "full",
-                                margin: "0"
-                            }}           
                         >
-                            {algorithmList.map((algorithm) => {
-                                return (
-                                    <MenuItem value={algorithm}>{algorithm}</MenuItem>
-                                );
+                            {algorithmList.map((algorithm, index) => {
+                                return <MenuItem key={index} value={algorithm}>{algorithm}</MenuItem>
                             })}
                         </Select>
                     </FormControl>
-                    {/* Button group for the search and reset buttons, they should look identical to the toggle buttons, transparent background and white text */}
-                    <ButtonGroup variant="outlined" aria-label="search and reset" sx={{ color: "white", borderColor: "white", height: "full" }}>
-                        <Button sx={{ color: "white", borderColor: "white", height: "full", ":hover": { backgroundColor: "transparent", borderColor: "gray" } }} onClick={() => {
-                            setIsSearching(true);
-                        }}>Search</Button>
-                        <Button sx={{ color: "white", borderColor: "white",  height: "full", borderLeftColor: "gray", ":hover": { backgroundColor: "transparent",  borderColor: "gray", borderLeftColor: "gray" } }} onClick={() => {
-                            setGrid(Utils.createGrid(25, 50));
-                            setWalls([]);
-                            setStartNode(undefined);
-                            setEndNode(undefined);
-                            setIsClearing(true);
-                        }}>Reset</Button>
-                    </ButtonGroup>
+                    <Button
+                        variant="outlined"
+                        sx={{
+                            color: colors.default,
+                            border: `1px solid ${colors.default}`,
+                            ":hover": {
+                                border: `1px solid ${colors.hover}`,
+                                backgroundColor: colors.default,
+                                color: colors.hover
+                            }
+                        }}
+                        onClick={handleSearch}
+                    >
+                        Search
+                    </Button>
+                    <Button
+                        variant="outlined"
+                        sx={{
+                            color: colors.default,
+                            border: `1px solid ${colors.default}`,
+                            ":hover": {
+                                border: `1px solid ${colors.hover}`,
+                                backgroundColor: colors.default,
+                                color: colors.hover
+                            }
+                        }}
+                        onClick={handleClear}
+                    >
+                        Clear
+                    </Button>
                 </div>
-            </header>
-            {/* Grid */}
+            </nav>
+            {/* Grid containing the nodes, should be a square that fills the screen */}
+            <div className="flex flex-col justify-center items-center">
+                {grid.nodes.map((row, rowIndex) => {
+                    return (
+                        <div key={rowIndex} className="flex flex-row">
+                            {row.map((node, colIndex) => {
+                                return(
+                                    // Tile for each node, onHover should slightly rise from the grid, and onClick should change the state of the node. 
+                                    //Advanced functionality: allow the user to draw walls by holding down the mouse button and dragging over the grid
+                                    <button
+                                        key={node.id}
+                                        disabled={drawing === drawingStates.none}
+                                        className='w-8 h-8 border border-gray-500' 
+                                        style={{
+                                            backgroundColor: node.isStart ? colors.start : node.isEnd ? colors.end : node.isWall ? colors.wall : node.isPath ? colors.path : node.isVisited ? colors.visited : colors.default,
+                                            color: colors.default
+                                        }}
+                                        onMouseDown={() => {
+                                            if (drawing === drawingStates.start) {
+                                                if(startNode === node) {
+                                                    setStartNode(undefined);
+                                                    node.isStart = false;
+                                                    return;
+                                                } else if(startNode) {
+                                                    startNode.isStart = false;
+                                                }
+                                                setStartNode(node);
+                                                node.isStart = true;
+                                                node.isEnd = false;
+                                                node.isWall = false;
+                                            } else if (drawing === drawingStates.end) {
+                                                if(endNode === node) {
+                                                    setEndNode(undefined);
+                                                    node.isEnd = false;
+                                                    return;
+                                                } else if(endNode) {
+                                                    endNode.isEnd = false;
+                                                }
+                                                setEndNode(node);
+                                                node.isStart = false;
+                                                node.isEnd = true;
+                                                node.isWall = false;
+                                            } else if(drawing === drawingStates.walls && !node.isStart && !node.isEnd && node.isWall){
+                                                setWalls(walls.filter(wall => wall.id !== node.id));
+                                                node.isWall = false;
+                                                setIsErasing(true);
+                                            } else if (drawing === drawingStates.walls && !node.isStart && !node.isEnd) {
+                                                setWalls([...walls, node]);
+                                                node.isStart = false;
+                                                node.isEnd = false;
+                                                node.isWall = true;
+                                                setIsDragging(true);
+                                            }
+                                        }}
+                                        onMouseEnter={() => {
+                                            if (drawing === drawingStates.walls && isDragging && !node.isStart && !node.isEnd) {
+                                                setWalls([...walls, node]);
+                                                node.isStart = false;
+                                                node.isEnd = false;
+                                                node.isWall = true;
+                                            } else if (drawing === drawingStates.walls && isErasing && !node.isStart && !node.isEnd && node.isWall) {
+                                                setWalls(walls.filter(wall => wall.id !== node.id));
+                                                node.isWall = false;
+                                            }
+                                        }}
+                                        onMouseUp={() => {
+                                            if (drawing === drawingStates.walls) {
+                                                setIsDragging(false);
+                                                setIsErasing(false);
+                                            }
+                                        }}
+                                    >
+                                        {node.isStart ? 'S' : node.isEnd ? 'E' : node.isWall ? 'W' : ''}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    );
+                })}
+            </div>
         </section>
     );
 };
