@@ -16,8 +16,13 @@ interface Node {
 
 interface Grid {
     nodes: Node[][];
-    start?: Node;
-    end?: Node;
+    start: Node | null;
+    end: Node | null;
+    rows: number;
+    cols: number;
+    walls: Node[];
+    visited: Node[];
+    path: Node[];
 }
 export type { Node, Grid };
 
