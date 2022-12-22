@@ -7,17 +7,6 @@ import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
 import Select, { SelectChangeEvent } from '@mui/material/Select';
 const Search = () => {
-    // Colors for the grid
-    const colors = {
-        start: "#4ee66c",
-        end: "#e64e4e",
-        wall: "#363029",
-        visited: "#4e4ee6",
-        path: "#e6e64e",
-        default: "#ffffff",
-        black: "#000000",
-        hover: "#1e243d"
-    }
     // Algorithms for the search
     const pathFindingAlgorithms = {
         "Dijkstra's Algorithm": Utils.dijkstra,
@@ -68,6 +57,34 @@ const Search = () => {
     const node_wall = `w-8 h-8 border border-black text-white rounded-sm transition-colors duration-100 ease-in-out bg-wall`;
     const node_visited = `w-8 h-8 border border-black text-white rounded-sm transition-colors duration-100 ease-in-out bg-visited`;
     const node_path = `w-8 h-8 border border-black text-white rounded-sm transition-colors duration-100 ease-in-out bg-path`;
+
+    // Custom buttons for the navbar
+    const CustomButton = (props: {text: string, bgColor: string, onClick: () => void}) => {
+        const drawMode = () => {
+            if (props.text === "Start" && drawing === drawingStates.start) return 1;
+            if (props.text === "End" && drawing === drawingStates.end) return 2;
+            if (props.text === "Wall" && drawing === drawingStates.walls) return 3;
+            return 0;
+        }
+        return (
+            <Button 
+                variant="outlined" 
+                sx={{
+                    border: `1px solid black`, 
+                    backgroundColor: drawMode() ? props.bgColor : 'transparent',
+                    color: drawMode() ? 'white' : 'black',
+                    margin: '0 5px', 
+                    '&:hover': {
+                        backgroundColor: props.bgColor, 
+                        color: 'white'
+                    }
+                }} 
+                onClick={props.onClick}
+            >
+                {props.text}
+            </Button>
+        );
+    }
 
     // Function to handle the user clicking the clear button
     const handleClear = () => {
@@ -120,7 +137,7 @@ const Search = () => {
                 setTimeout(() => {
                     node.isWall = true;
                     setGrid({...grid});
-                }, 20 * index);
+                }, 35 * index);
             });
         }
         else{
@@ -139,7 +156,7 @@ const Search = () => {
                     setTimeout(() => {
                         node.isWall = true;
                         setGrid({...grid});
-                    }, 20 * index);
+                    }, 30 * index);
                 });
             }
         }
@@ -148,68 +165,19 @@ const Search = () => {
     return (
         <section className="w-full min-h-screen flex flex-col bg-gray-300">
             {/* Header containing the title and controls for the search/drawing */}
-            <nav className="flex flex-row justify-between items-center bg-gray-700 p-4 h-24 w-full">
+            <nav className="flex flex-row justify-between items-center bg-white p-4 h-24 w-full">
                 {/* Title */}
-                <a href="/" className="text-2xl text-white font-bold">AI Search</a>
+                <a href="/" className="text-2xl text-black font-bold">AI Search</a>
                 {/* Controls */}
                 <div className="flex flex-row items-center">
                     {/* Draw Tools */}
                     <div id="ButtonGroup" className="hidden md:flex flex-row items-center">
                         {/* Button to draw the start node */}
-                        <Button 
-                            onClick={() => {
-                                setDrawing(drawing === drawingStates.start ? drawingStates.none : drawingStates.start);
-                            }}
-                            sx={{
-                                backgroundColor: drawing === drawingStates.start ? colors.start : 'transparent',
-                                color: drawing === drawingStates.start ? colors.default : colors.start,
-                                border: drawing === drawingStates.start ? 'none' : `1px solid white`,
-                                ":hover": {
-                                    border: `1px solid ${colors.start}`,
-                                    backgroundColor: drawing === drawingStates.start ? colors.start : 'transparent',
-                                    color: drawing === drawingStates.start ? colors.default : colors.start,
-                                }
-                            }}
-
-                        >
-                            Start
-                        </Button>
+                        <CustomButton text="Start" bgColor="green" onClick={() => setDrawing(drawing === drawingStates.start ? drawingStates.none : drawingStates.start)} />
                         {/* Button to draw the end node */}
-                        <Button
-                            onClick={() => {
-                                setDrawing(drawing === drawingStates.end ? drawingStates.none : drawingStates.end);
-                            }}
-                            sx={{
-                                backgroundColor: drawing === drawingStates.end ? colors.end : 'transparent',
-                                color: drawing === drawingStates.end ? colors.default : colors.end,
-                                border: drawing === drawingStates.end ? 'none' : `1px solid white`,
-                                ":hover": {
-                                    border: `1px solid ${colors.end}`,
-                                    backgroundColor: drawing === drawingStates.end ? colors.end : 'transparent',
-                                    color: drawing === drawingStates.end ? colors.default : colors.end,
-                                }
-                            }}
-                        >
-                            End
-                        </Button>
+                        <CustomButton text="End" bgColor="red" onClick={() => setDrawing(drawing === drawingStates.end ? drawingStates.none : drawingStates.end)} />
                         {/* Button to draw walls */}
-                        <Button
-                            onClick={() => {
-                                setDrawing(drawing === drawingStates.walls ? drawingStates.none : drawingStates.walls);
-                            }}
-                            sx={{
-                                backgroundColor: drawing === drawingStates.walls ? colors.wall : 'transparent',
-                                color: drawing === drawingStates.walls ? colors.default : colors.wall,
-                                border: drawing === drawingStates.walls ? 'none' : `1px solid white`,
-                                ":hover": {
-                                    border: `1px solid ${colors.wall}`,
-                                    backgroundColor: drawing === drawingStates.walls ? colors.wall : 'transparent',
-                                    color: drawing === drawingStates.walls ? colors.default : colors.wall,
-                                }
-                            }}
-                        >
-                            Walls
-                        </Button>
+                        <CustomButton text="Wall" bgColor="black" onClick={() => setDrawing(drawing === drawingStates.walls ? drawingStates.none : drawingStates.walls)} />
                     </div>
                     {/* Select to choose maze generation algorithm */}
                     <FormControl variant="standard" sx={{ m: 1, minWidth: 120 }}>
@@ -229,21 +197,11 @@ const Search = () => {
                         </Select>
                     </FormControl>
                     {/* Button to generate a maze */}
-                    <Button
-                        variant="outlined"
-                        sx={{
-                            color: colors.default,
-                            border: `1px solid ${colors.default}`,
-                            ":hover": {
-                                border: `1px solid [${colors.hover}]`,
-                                backgroundColor: colors.default,
-                                color: colors.hover
-                            }
-                        }}
+                    <CustomButton
                         onClick={handleGeneration}
-                    >
-                        Generate
-                    </Button>
+                        text="Generate Maze"
+                        bgColor='black'
+                    />
                     {/* Select to choose path finding pathFindingAlgorithm*/}
                     <FormControl variant="standard" sx={{ m: 1, minWidth: 120 }}>
                         <InputLabel>Path Algorithm</InputLabel>
@@ -262,37 +220,17 @@ const Search = () => {
                         </Select>
                     </FormControl>
                     {/* Button to initiate the path finding pathFindingAlgorithm */}
-                    <Button
-                        variant="outlined"
-                        sx={{
-                            color: colors.default,
-                            border: `1px solid ${colors.default}`,
-                            ":hover": {
-                                border: `1px solid [${colors.hover}]`,
-                                backgroundColor: colors.default,
-                                color: colors.hover
-                            }
-                        }}
+                    <CustomButton
                         onClick={handleSearch}
-                    >
-                        Search
-                    </Button>
+                        text="Find Path"
+                        bgColor='black'
+                    />
                     {/* Button to clear the grid */}
-                    <Button
-                        variant="outlined"
-                        sx={{
-                            color: colors.default,
-                            border: `1px solid ${colors.default}`,
-                            ":hover": {
-                                border: `1px solid [${colors.hover}]`,
-                                backgroundColor: colors.default,
-                                color: colors.hover
-                            }
-                        }}
+                    <CustomButton
                         onClick={handleClear}
-                    >
-                        Clear
-                    </Button>
+                        text="Clear"
+                        bgColor='black'
+                    />
                 </div>
             </nav>
             {/* Grid containing the nodes, should be a square that fills the screen */}

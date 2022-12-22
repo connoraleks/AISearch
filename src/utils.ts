@@ -243,10 +243,12 @@ const recursiveDivision = (grid: Grid, gap: number) => {
         //pop a section off the stack
         const {rowStart, rowEnd, colStart, colEnd} = stack.pop()!;
         //if the section is too small, skip it
-        if(rowEnd - rowStart < 1 || colEnd - colStart < 1) continue;
+        if(rowEnd - rowStart <= gap || colEnd - colStart <= gap) continue;
 
-        const row = Math.floor(Math.random() * (rowEnd - rowStart + 1)) + rowStart;
-        const col = Math.floor(Math.random() * (colEnd - colStart + 1)) + colStart;
+        // Get a random row and column from within the section, but not on the edge
+        const row = Math.floor(Math.random() * (rowEnd - rowStart - 2)) + rowStart + 1;
+        const col = Math.floor(Math.random() * (colEnd - colStart - 2)) + colStart + 1;
+
         // If the grid is taller than it is wide, create a random horizontal wall with a gap
         if(rowEnd - rowStart > colEnd - colStart) {
             for(let i = colStart; i <= colEnd; i++) {
