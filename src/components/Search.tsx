@@ -1,4 +1,5 @@
 import {Grid} from '../types';
+import {GiHamburgerMenu} from 'react-icons/gi';
 import * as Utils from '../utils';
 import { useState } from 'react';
 import { Button } from '@mui/material';
@@ -47,6 +48,8 @@ const Search = () => {
     const [isDragging, setIsDragging] = useState<boolean>(false);
     // State containing whether or not the user is erasing walls
     const [isErasing, setIsErasing] = useState<boolean>(false);
+    //State for mobile menu
+    const [showMenu, setShowMenu] = useState<boolean>(window.innerWidth < 768 ? false : true);
     // State containing the gap for the maze generation
     const [gap, ] = useState<number>(2);
 
@@ -164,12 +167,13 @@ const Search = () => {
 
     return (
         <section className="w-full min-h-screen flex flex-col bg-gray-300">
-            {/* Header containing the title and controls for the search/drawing */}
+            {/*Turn the following navbar into a mobile responsive navbar, turning into a hamburger menu on mobile*/}
             <nav className="flex flex-row justify-between items-center bg-white p-4 h-24 w-full">
                 {/* Title */}
                 <a href="/" className="text-2xl text-black font-bold">AI Search</a>
                 {/* Controls */}
-                <div className="flex flex-row items-center">
+                {window.innerWidth > 750 ? 
+                (<div className="flex flex-row items-center">
                     {/* Draw Tools */}
                     <div id="ButtonGroup" className="hidden md:flex flex-row items-center">
                         {/* Button to draw the start node */}
@@ -231,7 +235,93 @@ const Search = () => {
                         text="Clear"
                         bgColor='black'
                     />
-                </div>
+                </div>) :
+                (showMenu ?
+                (<div className="absolute top-0 right-0 w-full h-full bg-white flex flex-col justify-center items-center">
+                    {/* Close button positioned at the top right of the menu absolute */}
+                    <div className="absolute top-0 right-0">
+                        <CustomButton text="X" bgColor="black" onClick={() => setShowMenu(false)} />
+                    </div>
+                    {/* Button to draw the start node */}
+                    <CustomButton text="Start" bgColor="green" onClick={() => {
+                        setShowMenu(false);
+                        setDrawing(drawing === drawingStates.start ? drawingStates.none : drawingStates.start)}
+                    } />
+                    {/* Button to draw the end node */}
+                    <CustomButton text="End" bgColor="red" onClick={() => {
+                        setShowMenu(false);
+                        setDrawing(drawing === drawingStates.end ? drawingStates.none : drawingStates.end)}
+                    } />
+                    {/* Button to draw walls */}
+                    <CustomButton text="Wall" bgColor="black" onClick={() => {
+                        setShowMenu(false);
+                        setDrawing(drawing === drawingStates.walls ? drawingStates.none : drawingStates.walls)}
+                    } />
+                    {/* Select to choose maze generation algorithm */}
+                    <FormControl variant="standard" sx={{ m: 1, minWidth: 120 }}>
+                        <InputLabel>Maze Algorithm</InputLabel>
+                        <Select
+                            labelId="mazeAlgorithm-select-label"
+                            id="mazeAlgorithm-select"
+                            value={mazeAlgorithm[0]}
+                            label="Algorithm"
+                            onChange={(event: SelectChangeEvent) => {
+                                setMazeAlgorithm([event.target.value as string, mazeAlgorithms[event.target.value as keyof typeof mazeAlgorithms]]);
+                            }}
+                        >
+                            {mazeAlgorithmList.map((mazeAlgorithm, index) => {
+                                return <MenuItem key={index} value={mazeAlgorithm}>{mazeAlgorithm}</MenuItem>
+                            })}
+                        </Select>
+                    </FormControl>
+                    {/* Button to generate a maze */}
+                    <CustomButton
+                        onClick={() => {
+                            setShowMenu(false);
+                            handleGeneration();
+                        }}
+                        text="Generate Maze"
+                        bgColor='black'
+                    />
+                    {/* Select to choose path finding pathFindingAlgorithm*/}
+                    <FormControl variant="standard" sx={{ m: 1, minWidth: 120 }}>
+                        <InputLabel>Path Algorithm</InputLabel>
+                        <Select
+                            labelId="pathFindingAlgorithm-select-label"
+                            id="pathFindingAlgorithm-select"
+                            value={pathFindingAlgorithm[0]}
+                            label="Algorithm"
+                            onChange={(event: SelectChangeEvent) => {
+                                setPathFindingAlgorithm([event.target.value as string, pathFindingAlgorithms[event.target.value as keyof typeof pathFindingAlgorithms]]);
+                            }}
+                        >
+                            {pathFindingAlgorithmList.map((pathFindingAlgorithm, index) => {
+                                return <MenuItem key={index} value={pathFindingAlgorithm}>{pathFindingAlgorithm}</MenuItem>
+                            })}
+                        </Select>
+                    </FormControl>
+                    {/* Button to initiate the path finding pathFindingAlgorithm */}
+                    <CustomButton
+                        onClick={() => {
+                            setShowMenu(false);
+                            handleSearch();
+                        }}
+                        text="Find Path"
+                        bgColor='black'
+                    />
+                    {/* Button to clear the grid */}
+                    <CustomButton
+                        onClick={() => {
+                            setShowMenu(false);
+                            handleClear();
+                        }}
+                        text="Clear"
+                        bgColor='black'
+                    />
+                </div>) :
+                (<div className="h-full flex justify-center items-center">
+                    <GiHamburgerMenu className="text-3xl" fill='black' onClick={() => setShowMenu(true)} />
+                </div>))}
             </nav>
             {/* Grid containing the nodes, should be a square that fills the screen */}
             <div className="flex flex-col justify-center items-center">
