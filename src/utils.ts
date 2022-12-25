@@ -245,14 +245,14 @@ const recursiveDivision = (grid: Grid, gap: number) => {
         //if the section is too small, skip it
         if(rowEnd - rowStart <= gap || colEnd - colStart <= gap) continue;
 
-        // Get a random row and column from within the section, but not on the edge
-        const row = Math.floor(Math.random() * (rowEnd - rowStart - 2)) + rowStart + 1;
-        const col = Math.floor(Math.random() * (colEnd - colStart - 2)) + colStart + 1;
+        // Get a random row and column from within the section, but not within the constant gap from the edges
+        const row = Math.floor(Math.random() * (rowEnd - rowStart - gap * 2)) + rowStart + gap;
+        const col = Math.floor(Math.random() * (colEnd - colStart - gap * 2)) + colStart + gap;
 
         // If the grid is taller than it is wide, create a random horizontal wall with a gap
         if(rowEnd - rowStart > colEnd - colStart) {
             for(let i = colStart; i <= colEnd; i++) {
-                if(!(i < col + gap && i > col - gap) && gridCopy[row][i] !== startNode && gridCopy[row][i] !== endNode) {
+                if(!(i >= col  && i < col + gap) && gridCopy[row][i] !== startNode && gridCopy[row][i] !== endNode) {
                     gridCopy[row][i].isWall = true;
                     walls.push(gridCopy[row][i]);
                 }
@@ -264,7 +264,7 @@ const recursiveDivision = (grid: Grid, gap: number) => {
         // If the grid is wider than it is tall, create a random vertical wall with a gap
         else if(rowEnd - rowStart < colEnd - colStart) {
             for(let i = rowStart; i <= rowEnd; i++) {
-                if(!(i < row + gap && i > row - gap) && gridCopy[i][col] !== startNode && gridCopy[i][col] !== endNode) {
+                if(!(i >= row  && i < row + gap) && gridCopy[i][col] !== startNode && gridCopy[i][col] !== endNode) {
                     gridCopy[i][col].isWall = true;
                     walls.push(gridCopy[i][col]);
                 }

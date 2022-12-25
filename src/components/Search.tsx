@@ -2,11 +2,9 @@ import {Grid} from '../types';
 import {GiHamburgerMenu} from 'react-icons/gi';
 import * as Utils from '../utils';
 import { useState } from 'react';
-import { Button } from '@mui/material';
-import InputLabel from '@mui/material/InputLabel';
-import MenuItem from '@mui/material/MenuItem';
-import FormControl from '@mui/material/FormControl';
+import { Button, IconButton, Menu, MenuItem, Slider, Stack, TextField, Typography, FormControl, InputLabel } from '@mui/material';
 import Select, { SelectChangeEvent } from '@mui/material/Select';
+import { Box } from '@mui/system';
 const Search = () => {
     // Algorithms for the search
     const pathFindingAlgorithms = {
@@ -34,8 +32,8 @@ const Search = () => {
         none: "none"
     }
     // Number of rows for the grid, and number of columns for the grid, calculated from the size of the window given that each node is 32px by 32px
-    const numRows = Math.floor((window.innerHeight - 96) / 32); // 96px is the height of the header
-    const numCols = Math.floor(window.innerWidth / 32);
+    const numRows = Math.floor((window.innerHeight - 96) / 20); // 96px is the height of the header
+    const numCols = Math.floor(window.innerWidth / 20);
     // State containing the pathFindingAlgorithm to use
     const [pathFindingAlgorithm, setPathFindingAlgorithm] = useState<[string, (grid: Grid) => boolean]>([pathFindingAlgorithmList[2], pathFindingAlgorithms[pathFindingAlgorithmList[2] as keyof typeof pathFindingAlgorithms]]);
     //State containing the mazeAlgorithm to use
@@ -51,15 +49,17 @@ const Search = () => {
     //State for mobile menu
     const [showMenu, setShowMenu] = useState<boolean>(window.innerWidth < 768 ? false : true);
     // State containing the gap for the maze generation
-    const [gap, ] = useState<number>(2);
+    const [gap, setGap] = useState<number>(2);
+    //State containing the speed multiplier for the animations
+    const [speed, setSpeed] = useState<number>(1);
 
     // Classes for the nodes to style them, the color change should be smooth and not flicker
-    const node_default = `w-8 h-8 border border-black text-white rounded-sm transition-colors duration-100 ease-in-out bg-default`;
-    const node_start = `w-8 h-8 border border-black text-white rounded-sm transition-colors duration-100 ease-in-out bg-start`;
-    const node_end = `w-8 h-8 border border-black text-white rounded-sm transition-colors duration-100 ease-in-out bg-end`;
-    const node_wall = `w-8 h-8 border border-black text-white rounded-sm transition-colors duration-100 ease-in-out bg-wall`;
-    const node_visited = `w-8 h-8 border border-black text-white rounded-sm transition-colors duration-100 ease-in-out bg-visited`;
-    const node_path = `w-8 h-8 border border-black text-white rounded-sm transition-colors duration-100 ease-in-out bg-path`;
+    const node_default = `w-5 h-5 border border-black text-white rounded-sm transition-colors duration-100 ease-in-out bg-default`;
+    const node_start = `w-5 h-5 border border-black text-white rounded-sm transition-colors duration-100 ease-in-out bg-start`;
+    const node_end = `w-5 h-5 border border-black text-white rounded-sm transition-colors duration-100 ease-in-out bg-end`;
+    const node_wall = `w-5 h-5 border border-black text-white rounded-sm transition-colors duration-100 ease-in-out bg-wall`;
+    const node_visited = `w-5 h-5 border border-black text-white rounded-sm transition-colors duration-100 ease-in-out bg-visited`;
+    const node_path = `w-5 h-5 border border-black text-white rounded-sm transition-colors duration-100 ease-in-out bg-path`;
 
     // Custom buttons for the navbar
     const CustomButton = (props: {text: string, bgColor: string, onClick: () => void}) => {
@@ -112,7 +112,7 @@ const Search = () => {
                     console.log('visited: ', node.row, node.col, node === grid.nodes[node.row][node.col])
                     node.isVisited = true;
                     setGrid({...grid});
-                }, 20 * index);
+                }, 20 * index * speed);
             });
             grid.path = Utils.getPath(grid.end);
             grid.path.forEach((node, index) => {
@@ -120,7 +120,7 @@ const Search = () => {
                     console.log('path: ', node.row, node.col, node === grid.nodes[node.row][node.col])
                     node.isPath = true;
                     setGrid({...grid});
-                }, 20 * (index + grid.visited.length));
+                }, 20 * (index + grid.visited.length) * speed);
             });
         }
     }
@@ -140,7 +140,7 @@ const Search = () => {
                 setTimeout(() => {
                     node.isWall = true;
                     setGrid({...grid});
-                }, 35 * index);
+                }, 25 * index * speed);
             });
         }
         else{
@@ -159,7 +159,7 @@ const Search = () => {
                     setTimeout(() => {
                         node.isWall = true;
                         setGrid({...grid});
-                    }, 30 * index);
+                    }, 30 * index * speed);
                 });
             }
         }
@@ -168,78 +168,169 @@ const Search = () => {
     return (
         <section className="w-full min-h-screen flex flex-col bg-gray-300">
             {/*Turn the following navbar into a mobile responsive navbar, turning into a hamburger menu on mobile*/}
-            <nav className="flex flex-row justify-between items-center bg-white p-4 h-24 w-full">
+            <nav className="flex flex-row justify-between items-center bg-white p-4 h-24 w-full border border-black">
                 {/* Title */}
-                <a href="/" className="text-2xl text-black font-bold">AI Search</a>
-                {/* Controls */}
+                <a href="/" className="text-2xl text-black font-semibold">AI Search</a>
+                {/* Navbar items */}
                 {window.innerWidth > 750 ? 
                 (<div className="flex flex-row items-center">
-                    {/* Draw Tools */}
-                    <div id="ButtonGroup" className="hidden md:flex flex-row items-center">
+                    {/* Draw Tools box, containing the buttons to draw the start node, end node, and walls with an inputLabel to label the box */}
+                    <Box
+                        sx={{
+                            outline: '1px solid red',
+                            display: 'flex',
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            '& > :not(style)': {
+                                m: 1,
+                            },
+                        }}
+                    >
                         {/* Button to draw the start node */}
                         <CustomButton text="Start" bgColor="green" onClick={() => setDrawing(drawing === drawingStates.start ? drawingStates.none : drawingStates.start)} />
                         {/* Button to draw the end node */}
                         <CustomButton text="End" bgColor="red" onClick={() => setDrawing(drawing === drawingStates.end ? drawingStates.none : drawingStates.end)} />
                         {/* Button to draw walls */}
                         <CustomButton text="Wall" bgColor="black" onClick={() => setDrawing(drawing === drawingStates.walls ? drawingStates.none : drawingStates.walls)} />
-                    </div>
-                    {/* Select to choose maze generation algorithm */}
-                    <FormControl variant="standard" sx={{ m: 1, minWidth: 120 }}>
-                        <InputLabel>Maze Algorithm</InputLabel>
-                        <Select
-                            labelId="mazeAlgorithm-select-label"
-                            id="mazeAlgorithm-select"
-                            value={mazeAlgorithm[0]}
-                            label="Algorithm"
-                            onChange={(event: SelectChangeEvent) => {
-                                setMazeAlgorithm([event.target.value as string, mazeAlgorithms[event.target.value as keyof typeof mazeAlgorithms]]);
-                            }}
-                        >
-                            {mazeAlgorithmList.map((mazeAlgorithm, index) => {
-                                return <MenuItem key={index} value={mazeAlgorithm}>{mazeAlgorithm}</MenuItem>
-                            })}
-                        </Select>
-                    </FormControl>
-                    {/* Button to generate a maze */}
-                    <CustomButton
-                        onClick={handleGeneration}
-                        text="Generate Maze"
-                        bgColor='black'
-                    />
-                    {/* Select to choose path finding pathFindingAlgorithm*/}
-                    <FormControl variant="standard" sx={{ m: 1, minWidth: 120 }}>
-                        <InputLabel>Path Algorithm</InputLabel>
-                        <Select
-                            labelId="pathFindingAlgorithm-select-label"
-                            id="pathFindingAlgorithm-select"
-                            value={pathFindingAlgorithm[0]}
-                            label="Algorithm"
-                            onChange={(event: SelectChangeEvent) => {
-                                setPathFindingAlgorithm([event.target.value as string, pathFindingAlgorithms[event.target.value as keyof typeof pathFindingAlgorithms]]);
-                            }}
-                        >
-                            {pathFindingAlgorithmList.map((pathFindingAlgorithm, index) => {
-                                return <MenuItem key={index} value={pathFindingAlgorithm}>{pathFindingAlgorithm}</MenuItem>
-                            })}
-                        </Select>
-                    </FormControl>
-                    {/* Button to initiate the path finding pathFindingAlgorithm */}
-                    <CustomButton
-                        onClick={handleSearch}
-                        text="Find Path"
-                        bgColor='black'
-                    />
-                    {/* Button to clear the grid */}
-                    <CustomButton
-                        onClick={handleClear}
-                        text="Clear"
-                        bgColor='black'
-                    />
+                    </Box>
+                    {/* Search Tools box, containing the buttons to clear the grid, generate a maze, and search with an inputLabel to label the box */}
+                    <Box
+                        sx={{
+                            outline: '1px solid green',
+                            display: 'flex',
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            '& > :not(style)': {
+                                m: 1,
+                            },
+                        }}
+                    >
+                        {/* Button to clear the grid */}
+                        <CustomButton text="Clear" bgColor="gray" onClick={handleClear} />
+                        {/* Button to generate a maze */}
+                        <CustomButton text="Generate Maze" bgColor="gray" onClick={handleGeneration} />
+                        {/* Button to search */}
+                        <CustomButton text="Search" bgColor="blue" onClick={handleSearch} />
+                    </Box>
+                    {/* Input box to change the speed of the animations */}
+                    <Box
+                        sx={{
+                            outline: '1px solid blue',
+                            display: 'flex',
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            '& > :not(style)': {
+                                m: 1,
+                            },
+                        }}
+                    >
+                        <FormControl sx={{ m: 1, minWidth: 120 }}>
+                            <InputLabel id="speed-label">Speed</InputLabel>
+                            <Select
+                                labelId="speed-label"
+                                id="speed-select"
+                                value={speed}
+                                label="Speed"
+                                onChange={(e: any) => setSpeed(e.target.value as number)}
+                            >
+                                <MenuItem value={2}>Slow</MenuItem>
+                                <MenuItem value={1}>Medium</MenuItem>
+                                <MenuItem value={0.1}>Fast</MenuItem>
+                                <MenuItem value={0.001}>Very Fast</MenuItem>
+                            </Select>
+                        </FormControl>
+                    </Box>
+                    {/* Input box to change the gap size of the maze */}
+                    <Box
+                        sx={{
+                            outline: '1px solid blue',
+                            display: 'flex',
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            '& > :not(style)': {
+                                m: 1,
+                            },
+                        }}
+                    >
+                        <FormControl sx={{ m: 1, minWidth: 120 }}>
+                            <InputLabel id="gap-label">Gap</InputLabel>
+                            <Select
+                                labelId="gap-label"
+                                id="gap-select"
+                                value={gap}
+                                label="Gap"
+                                onChange={(e: any) => setGap(e.target.value as number)}
+                            >
+                                <MenuItem value={2}>Small</MenuItem>
+                                <MenuItem value={3}>Medium</MenuItem>
+                                <MenuItem value={4}>Large</MenuItem>
+                            </Select>
+                        </FormControl>
+                    </Box>
+                    {/* Input box to change the maze generation algorithm */}
+                    <Box
+                        sx={{
+                            outline: '1px solid orange',
+                            display: 'flex',
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            '& > :not(style)': {
+                                m: 1,
+                            },
+                        }}
+                    >
+                        <FormControl sx={{ m: 1, minWidth: 120 }}>
+                            <InputLabel id="maze-label">Maze</InputLabel>
+                            <Select
+                                labelId="maze-label"
+                                id="maze-select"
+                                value={mazeAlgorithm[0] as string}
+                                label="Maze"
+                                onChange={(event: SelectChangeEvent) => {
+                                    setMazeAlgorithm([event.target.value as string, mazeAlgorithms[event.target.value as keyof typeof mazeAlgorithms]]);
+                                }}
+                            >
+                                {mazeAlgorithmList.map((mazeAlgorithm, index) => {
+                                    return <MenuItem key={index} value={mazeAlgorithm}>{mazeAlgorithm}</MenuItem>
+                                })}
+                            </Select>
+                        </FormControl>
+                    </Box>
+                    {/* Input box to change the search algorithm */}
+                    <Box
+                        sx={{
+                            outline: '1px solid orange',
+                            display: 'flex',
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            '& > :not(style)': {
+                                m: 1,
+                            },
+                        }}
+                    >
+                        <FormControl sx={{ m: 1, minWidth: 120 }}>
+                            <InputLabel id="search-label">Search</InputLabel>
+                            <Select
+                                labelId="search-label"
+                                id="search-select"
+                                value={pathFindingAlgorithm[0] as string}
+                                label="Search"
+                                onChange={(event: SelectChangeEvent) => {
+                                    setPathFindingAlgorithm([event.target.value as string, pathFindingAlgorithms[event.target.value as keyof typeof pathFindingAlgorithms]]);
+                                }}
+                            >
+                                {pathFindingAlgorithmList.map((pathFindingAlgorithm, index) => {
+                                    return <MenuItem key={index} value={pathFindingAlgorithm}>{pathFindingAlgorithm}</MenuItem>
+                                })}
+                            </Select>
+                        </FormControl>
+                    </Box>
                 </div>) :
+                // Hamburger Menu
                 (showMenu ?
                 (<div className="absolute top-0 right-0 w-full h-full bg-white flex flex-col justify-center items-center">
                     {/* Close button positioned at the top right of the menu absolute */}
-                    <div className="absolute top-0 right-0">
+                    <div className="absolute top-0 right-0 p-4">
                         <CustomButton text="X" bgColor="black" onClick={() => setShowMenu(false)} />
                     </div>
                     {/* Button to draw the start node */}
@@ -300,6 +391,23 @@ const Search = () => {
                             })}
                         </Select>
                     </FormControl>
+                    {/* Slider to adjust the speed of the path finding pathFindingAlgorithm */}
+                    <div className="flex flex-row items-center gap-4">
+                        <p className="text-black">Speed: </p>
+                        <Slider
+                            defaultValue={speed}
+                            aria-label="Speed"
+                            valueLabelDisplay="auto"
+                            step={0.01}
+                            marks
+                            min={0.01}
+                            max={1}
+                            onChange={(event: any, value: number | number[]) => {
+                                setSpeed(1 - (value as number) + 0.01);
+                            }}
+                            sx={{  minWidth: 120 }}
+                        />
+                    </div>
                     {/* Button to initiate the path finding pathFindingAlgorithm */}
                     <CustomButton
                         onClick={() => {
@@ -319,6 +427,7 @@ const Search = () => {
                         bgColor='black'
                     />
                 </div>) :
+                // Hamburger Menu Icon
                 (<div className="h-full flex justify-center items-center">
                     <GiHamburgerMenu className="text-3xl" fill='black' onClick={() => setShowMenu(true)} />
                 </div>))}
@@ -417,9 +526,7 @@ const Search = () => {
                                                 setIsErasing(false);
                                             }
                                         }}
-                                    >
-                                        {node.isStart ? 'S' : node.isEnd ? 'E' : node.isWall ? 'W' : ''}
-                                    </button>
+                                    />
                                 );
                             })}
                         </div>
