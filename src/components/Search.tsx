@@ -5,25 +5,33 @@ import { useState, useRef, useEffect } from 'react';
 import { MenuComponent } from './MenuComponent';
 import Slider from '@mui/material/Slider';
 import {Box, ToggleButton, ToggleButtonGroup, Typography} from '@mui/material';
+import { animate, motion } from 'framer-motion';
 
 
 const Search = () => {
+    const windowRef = useRef<HTMLDivElement>(null); // The ref to the grid div, used to get the width and height for resizing the grid
     const gridRef = useRef<HTMLDivElement>(null); // The ref to the grid div, used to get the width and height for resizing the grid
     const [grid, setGrid] = useState<Grid>(Utils.createGrid( 10, 10)); // The grid object, composed of {nodes: Node[][], start: Node | null, end: Node | null, width: number, height: number}
-    const [numRows, setNumRows] = useState<number>(10); // The number of rows in the grid
-    const [numCols, setNumCols] = useState<number>(10); // The number of columns in the grid
-    const [nodeSize, setNodeSize] = useState<number>(32); // The size of each node in the grid
-    const [padding, setPadding] = useState<number>(75); // The padding around the grid
+    const [numRows, setNumRows] = useState<number | null>(null); // The number of rows in the grid
+    const [numCols, setNumCols] = useState<number | null>(null); // The number of columns in the grid
+    const [nodeSize, setNodeSize] = useState<number>(55); // The size of each node in the grid
+    const padding = 50; // The padding around the grid
     const [drawMode, setDrawMode] = useState<DrawType | null>(null); // The current draw mode, either 'wall', 'start', 'end', or null
-    // UseEffect to resize the grid when either the gridRef, numRows, or numCols change
+    const [mouseDown, setMouseDown] = useState<boolean>(false); // Whether or not the mouse is currently down
+    // UseEffect to resize the grid when either the windowRef, numRows, or numCols change
     useEffect(() => {
-        if (gridRef.current && numRows && numCols && nodeSize && padding) {
-            if(Math.floor((gridRef.current.clientHeight - (padding * 2)) / nodeSize) !== numRows || Math.floor((gridRef.current.clientWidth - (padding * 2)) / nodeSize) !== numCols) {
-                setNumCols(Math.floor((gridRef.current.clientWidth - (padding * 2)) / nodeSize));
-                setNumRows(Math.floor((gridRef.current.clientHeight - (padding * 2)) / nodeSize));
-                setGrid(Utils.createGrid(Math.floor((gridRef.current.clientWidth - (padding * 2)) / nodeSize), Math.floor((gridRef.current.clientHeight - (padding * 2)) / nodeSize)));
+        const resizeGrid = () => {
+            if(gridRef.current){
+                const {width, height} = gridRef.current.getBoundingClientRect();
+                const numRows = Math.floor((height) / nodeSize);
+                const numCols = Math.floor((width) / nodeSize);
+                setNumRows(numRows);
+                setNumCols(numCols);
+                setGrid(Utils.createGrid(numCols, numRows));
             }
         }
+        window.addEventListener('resize', resizeGrid);
+        resizeGrid();
     }, [gridRef, numRows, numCols, nodeSize, padding]);
 
     // JSX element to be passed to MenuCompoenent as a propm, used to control the grid. It will be the content of the menu
@@ -38,7 +46,7 @@ const Search = () => {
                     alignItems: 'center',
                 }}
             >
-                <Typography id='input-slider' gutterBottom>
+                <Typography id='input-slider' gutterBottom sx={{fontWeight: 'medium'}} variant='h6'>
                     Draw Controls
                 </Typography>
                 <ToggleButtonGroup
@@ -95,63 +103,56 @@ const Search = () => {
                 </ToggleButtonGroup>
             </Box>
             <Slider
-                defaultValue={32}
+                defaultValue={nodeSize}
                 aria-label='Node Size'
                 valueLabelDisplay='auto'
-                step={1}
-                min={1}
+                step={5}
+                min={20}
                 max={100}
                 onChangeCommitted={(event, value) => setNodeSize(value as number)}
             />
-            <Slider
-                defaultValue={75}
-                aria-label='Padding'
-                valueLabelDisplay='auto'
-                step={1}
-                min={1}
-                max={100}
-                onChangeCommitted={(event, value) => setPadding(value as number)}
-            />
         </div>
     );
+    const handleNodeClick = (node: Node, rowIndex: number, nodeIndex: number) => {
+        if(drawMode === DrawType.Start && !grid.startNode) {
+            grid.nodes[rowIndex][nodeIndex].type = NodeType.Start;
+            grid.startNode = grid.nodes[rowIndex][nodeIndex];
+        } else if(drawMode === DrawType.Start && grid.startNode){
+            grid.nodes[rowIndex][nodeIndex].type = node.type === NodeType.Start ? NodeType.Default : NodeType.Start;
+            if(node.type === NodeType.Start) {
+                grid.startNode = null;
+            } else {
+                grid.startNode.type = NodeType.Default;
+                grid.startNode = grid.nodes[rowIndex][nodeIndex];
+            }
+        }
+    }
+            
 
     // JSX element to be returned by the Search component
     return (
         <>
-            <MenuComponent content={menuContent} />
-            <div className='w-full h-full flex flex-col justify-center items-center' ref={gridRef}>
-                <div className='flex flex-col justify-center items-center border-2 border-black'>
+            <motion.div className='w-full h-full flex flex-col justify-center items-center' ref={windowRef} style={{padding: padding}}>
+                <MenuComponent content={menuContent} constraintRef={windowRef} />
+                <motion.div className='w-full h-full flex flex-col justify-center items-center border-2 border-black rounded-lg overflow-visible' ref={gridRef}>
                     {grid.nodes.map((row, rowIndex) => {
                         return (
-                            <div className='flex' key={rowIndex}>
+                            <motion.div className='w-full h-full flex flex-row justify-center items-center' key={rowIndex}>
                                 {row.map((node, nodeIndex) => {
                                     return (
-                                        <div
-                                            style = {{width: `${nodeSize}px`, height: `${nodeSize}px`}}
-                                            className={`border border-black flex justify-center items-center ${
-                                                node.type === NodeType.Start
-                                                    ? 'bg-start'
-                                                    : node.type === NodeType.End
-                                                    ? 'bg-end'
-                                                    : node.status === NodeStatus.Visited
-                                                    ? 'bg-visited'
-                                                    : node.status === NodeStatus.Path
-                                                    ? 'bg-path'
-                                                    : node.type === NodeType.Wall
-                                                    ? 'bg-wall'
-                                                    : ''
-                                            }`}
-                                            key={nodeIndex}
-                                        ></div>
+                                        <motion.div
+                                            className='w-full h-full flex flex-row justify-center items-center overflow-hidden border border-black'
+                                        >
+                                        </motion.div>
                                     );
                                 })}
-                            </div>
+                            </motion.div>
                         );
-                    })
-                    }
-                </div>
-            </div>
+                    })}
+                </motion.div>
+            </motion.div>
         </>
     );
 }
+
 export default Search;

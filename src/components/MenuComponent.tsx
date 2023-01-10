@@ -1,60 +1,100 @@
-import { useRef } from "react";
-import { motion, useCycle } from "framer-motion";
-import { useDimensions } from "./use-dimensions";
-import { MenuToggle } from "./MenuToggle";
+import { ReactElement, useState } from "react";
+import { motion } from "framer-motion";
+import {GiHamburgerMenu} from 'react-icons/gi';
 
-const sidebar = {
-  open: (height = 1000) => ({
-    clipPath: `circle(${height * 2 + 200}px at 40px 40px)`,
-    transition: {
-      type: "spring",
-      stiffness: 20,
-      restDelta: 2
-    }
-  }),
-  closed: {
-    clipPath: "circle(30px at 40px 40px)",
-    transition: {
-      delay: 0.5,
-      type: "spring",
-      stiffness: 400,
-      damping: 40
-    }
-  }
-};
+export const MenuComponent = ({ content, constraintRef }: { content: ReactElement<any,any>, constraintRef: React.RefObject<HTMLDivElement> }) => {
+    const [open, setOpen] = useState(false);
+    const [dragging, setDragging] = useState(false);
+    const [menuContent, setMenuContent] = useState<ReactElement<any,any> | null>(content);
 
-export const MenuComponent = ({content}: {content: any}) => {
-  const [isOpen, toggleOpen] = useCycle(false, true);
-  const containerRef = useRef(null);
-  const { height } = useDimensions(containerRef);
-
-  return (
-    <motion.nav
-      initial={false}
-      animate={isOpen ? "open" : "closed"}
-      custom={height}
-      ref={containerRef}
-    >
-      <motion.div 
+    return (
+      <motion.button
+        drag
+        whileDrag={{ scale: 1.1 }}
+        dragConstraints={constraintRef}
+        onDragStart={() => setDragging(true)}
+        onDragEnd={() => setTimeout(() => setDragging(false), 100)}
+        animate={{
+          scale: open ? 1.1 : 1,
+          borderRadius: open ? "1rem" : "50%",
+          width: open ? "20rem" : "4rem",
+          height: open ? "20rem" : "4rem",
+          padding: open ? "2rem" : "0",
+          backgroundColor: open ? "gray" : "white",
+        }}
         style={{
           position: "absolute",
-          top: 0,
-          left: 0,
-          bottom: 0,
-          width: "300px",
-          background: 'white',
-          opacity: 0.95,
-          backdropFilter: 'blur(10px)',
-          padding: '0 2rem',
+          top: '1rem',
+          left: '1rem',
+          bottom: '1rem',
+          zIndex: 10,
+          borderRadius: open ? "1rem" : "50%",
           border: '1px solid black',
+          boxShadow: '0 0 10px 0 rgba(0,0,0,0.5)',
+          backdropFilter: 'blur(10px)',
+          opacity: 0.9,
         }}
-        variants={sidebar}
+        onClick={() => dragging ? null : setOpen(!open)}
+        transition={{
+          type: "spring",
+          stiffness: 300,
+          damping: 30,
+        }}
       >
-        <div className="flex flex-col justify-center items-center h-full">
-          {content}
-        </div>
-      </motion.div>
-      <MenuToggle toggle={() => toggleOpen()} />
-    </motion.nav>
-  );
-};
+        {open ? 
+          <motion.div
+            animate={{
+              opacity: open ? 1 : 0,
+              scale: open ? 1 : 0,
+            }}
+            transition={{
+              type: "spring",
+              stiffness: 300,
+              damping: 30,
+            }}
+            style={{
+              height: '100%',
+              width: '100%',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              flexDirection: 'column',
+              backgroundColor: 'white',
+              borderRadius: '1rem',
+              padding: '1rem',
+              boxShadow: '0 0 10px 0 rgba(0,0,0,0.5)',
+              opacity: 0.9,
+            }}
+            onClick={e => {
+              e.stopPropagation();
+              e.preventDefault();
+              e.nativeEvent.stopImmediatePropagation();
+            }}
+            onPointerDownCapture={e => e.stopPropagation()}
+          >
+            {menuContent}
+          </motion.div>
+          :
+          <motion.div
+            animate={{
+              opacity: !open ? 1 : 0,
+              scale: !open ? 1 : 0,
+            }}
+            transition={{
+              type: "spring",
+              stiffness: 300,
+              damping: 30,
+            }}
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            <GiHamburgerMenu size={30} />
+          </motion.div>
+            }
+      </ motion.button>
+    );
+  };
+
