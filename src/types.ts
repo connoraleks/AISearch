@@ -1,12 +1,12 @@
 export enum NodeType {
-    Start = 0,
-    End = 1,
-    Wall = 2,
-    Default = 3,
+    Default = 0,
+    Start = 1,
+    End = 2,
+    Wall = 3,
 }
 export enum NodeStatus {
-    Visited = 0,
-    Unvisited = 1,
+    Default = 0,
+    Visited = 1,
     Path = 2,
 }
 export enum DrawType {
@@ -15,7 +15,7 @@ export enum DrawType {
     Wall = 2,
     Erase = 3,
 }
-export interface Node {
+export interface NodeInterface {
     row: number;
     col: number;
     type: NodeType;
@@ -24,12 +24,14 @@ export interface Node {
     g: number;
     h: number;
     f: number;
-    previousNode: Node | null;
+    previousNode: NodeInterface | null;
 }
-export interface Grid {
-    nodes: Node[][];
-    startNode: Node | null;
-    endNode: Node | null;
+export interface GridInterface {
+    nodes: NodeInterface[][];
+    startNode: NodeInterface | null;
+    endNode: NodeInterface | null;
+    walls: NodeInterface[];
+    path: NodeInterface[];
     width: number;
     height: number;
 }
