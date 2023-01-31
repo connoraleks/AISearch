@@ -34,7 +34,7 @@ export const MenuComponent = ({ content, constraintRef }: { content: ReactElemen
         }
 
       }}
-      onDragEnd={() => setTimeout(() => setDragging(false), 200)}
+      onDragEnd={() => setTimeout(() => setDragging(false), 300)}
       style={{
         position: 'absolute',
         top: '1rem',
